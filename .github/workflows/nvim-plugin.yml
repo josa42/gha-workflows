@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      specs:
+        required: false
+        type: string
+        default: specs
+      skip_lint:
+        required: false
+        type: boolean
+        default: false
+      skip_test:
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  lint:
+    if: inputs.skip_lint != true
+
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: josa42/gha-stylua@main
+
+  test:
+    if: inputs.skip_test != true
+
+    strategy:
+      matrix:
+        neovim: [ nightly, stable ]
+
+    name: Tests (neovim@${{ matrix.neovim }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: josa42/gha-plenary-busted@main
+        with:
+          neovim-version: "${{ matrix.neovim }}"
+          specs: ${{ inputs.specs }}
+
