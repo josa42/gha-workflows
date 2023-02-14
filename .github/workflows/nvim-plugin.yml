@@ -9,19 +9,45 @@ on:
         default: specs
       skip_lint:
         required: false
-        type: boolean
-        default: false
+        type: string
       skip_test:
         required: false
-        type: boolean
-        default: false
+        type: string
 
 env:
   GH_TOKEN: ${{ github.token }}
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+
+    outputs:
+      skip_lint: "${{ steps.lint.outputs.skip }}"
+      skip_test: "${{ steps.test.outputs.skip }}"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: lint
+        if: inputs.skip_lint == ''
+        name: detect should run lint
+        run: |
+          if ! [[ -f stylua.toml ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: test
+        if: inputs.skip_test == ''
+        name: detect should run lint
+        run: |
+          if ! [[ -d "${{ inputs.specs }}" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
   lint:
-    if: inputs.skip_lint != true
+    needs: [setup]
+    if: inputs.skip_lint != 'true' && needs.setup.outputs.skip_lint != 'true'
 
     name: Lint
     runs-on: ubuntu-latest
@@ -31,7 +57,8 @@ jobs:
       - uses: josa42/gha-stylua@main
 
   test:
-    if: inputs.skip_test != true
+    needs: [setup]
+    if: inputs.skip_test != 'true' && needs.setup.outputs.skip_test != 'true'
 
     strategy:
       matrix:
