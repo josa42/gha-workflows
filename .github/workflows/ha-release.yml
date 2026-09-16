@@ -1,0 +1,82 @@
+name: HA Release
+
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: Release assets (detected when empty)
+        required: false
+        type: string
+        default: ""
+      check_version:
+        description: Fail when the tag does not match the manifest version
+        required: false
+        type: string
+        default: "true"
+      draft:
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: detect
+        name: Detect the release assets
+        run: |
+          domain=""
+          if [[ -d custom_components ]]; then
+            domain=$(find custom_components -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | head -1)
+          fi
+          echo "domain=$domain" >> "$GITHUB_OUTPUT"
+
+          # An integration is packaged below, everything else ships the file
+          # HACS points at.
+          files="${{ inputs.files }}"
+          if [[ -z "$files" && -z "$domain" ]]; then
+            files=$(jq -r '.filename // empty' hacs.json 2>/dev/null || true)
+          fi
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+          if [[ -z "$files" && -z "$domain" ]]; then
+            echo "::error::no release assets found, pass them via the files input"
+            exit 1
+          fi
+
+      - name: Check the tag matches the manifest version
+        if: inputs.check_version != 'false' && steps.detect.outputs.domain != ''
+        run: |
+          manifest=$(jq -r .version "custom_components/${{ steps.detect.outputs.domain }}/manifest.json")
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "$manifest" != "$tag" ]]; then
+            echo "::error::manifest version $manifest does not match tag $tag"
+            exit 1
+          fi
+
+      - id: package
+        name: Create the release archive
+        if: steps.detect.outputs.domain != '' && inputs.files == ''
+        run: |
+          domain="${{ steps.detect.outputs.domain }}"
+          (cd custom_components && zip -r "../$domain.zip" "$domain")
+          echo "files=$domain.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "${{ steps.package.outputs.files || steps.detect.outputs.files }}"
+          generate_release_notes: true
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
