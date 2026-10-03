@@ -6,22 +6,22 @@ Call one with `uses: josa42/gha-workflows/.github/workflows/<file>@main`.
 
 | Workflow | Use for |
 | --- | --- |
-| [`ha-integration.yml`](.github/workflows/ha-integration.yml) | Home Assistant custom integrations: ruff, pytest, HACS and hassfest |
-| [`ha-plugin.yml`](.github/workflows/ha-plugin.yml) | Home Assistant frontend cards: syntax check and HACS |
-| [`ha-blueprints.yml`](.github/workflows/ha-blueprints.yml) | Home Assistant blueprint repositories driven by a Makefile |
-| [`ha-release.yml`](.github/workflows/ha-release.yml) | Releases for integrations and cards, started by hand |
-| [`esphome.yml`](.github/workflows/esphome.yml) | ESPHome device configs: yamllint and `esphome config` |
-| [`nvim-plugin.yml`](.github/workflows/nvim-plugin.yml) | Neovim plugins: stylua and plenary busted |
+| [`shared-ha-integration.yml`](.github/workflows/shared-ha-integration.yml) | Home Assistant custom integrations: ruff, pytest, HACS and hassfest |
+| [`shared-ha-plugin.yml`](.github/workflows/shared-ha-plugin.yml) | Home Assistant frontend cards: syntax check and HACS |
+| [`shared-ha-blueprints.yml`](.github/workflows/shared-ha-blueprints.yml) | Home Assistant blueprint repositories driven by a Makefile |
+| [`shared-ha-release.yml`](.github/workflows/shared-ha-release.yml) | Releases for integrations and cards, started by hand |
+| [`shared-esphome.yml`](.github/workflows/shared-esphome.yml) | ESPHome device configs: yamllint and `esphome config` |
+| [`shared-nvim-plugin.yml`](.github/workflows/shared-nvim-plugin.yml) | Neovim plugins: stylua and plenary busted |
 
 Each workflow detects what the calling repository actually contains and skips
 the jobs that do not apply, so most callers need no inputs at all.
 
-## ha-integration.yml
+## shared-ha-integration.yml
 
 ```yaml
 jobs:
   ci:
-    uses: josa42/gha-workflows/.github/workflows/ha-integration.yml@main
+    uses: josa42/gha-workflows/.github/workflows/shared-ha-integration.yml@main
 ```
 
 Jobs: `lint` (ruff over `custom_components` and the tests directory), `test`
@@ -42,12 +42,12 @@ Jobs: `lint` (ruff over `custom_components` and the tests directory), `test`
 | `hacs_ignore` | | Space separated HACS checks to ignore |
 | `skip_lint` / `skip_test` / `skip_validate` | detected | Set to `"true"` to force off |
 
-## ha-plugin.yml
+## shared-ha-plugin.yml
 
 ```yaml
 jobs:
   ci:
-    uses: josa42/gha-workflows/.github/workflows/ha-plugin.yml@main
+    uses: josa42/gha-workflows/.github/workflows/shared-ha-plugin.yml@main
 ```
 
 Runs `npm run check` when `package.json` defines that script, otherwise
@@ -60,12 +60,12 @@ Runs `npm run check` when `package.json` defines that script, otherwise
 | `hacs_ignore` | | Space separated HACS checks to ignore |
 | `skip_lint` / `skip_validate` | | Set to `"true"` to force off |
 
-## ha-blueprints.yml
+## shared-ha-blueprints.yml
 
 ```yaml
 jobs:
   ci:
-    uses: josa42/gha-workflows/.github/workflows/ha-blueprints.yml@main
+    uses: josa42/gha-workflows/.github/workflows/shared-ha-blueprints.yml@main
 ```
 
 Runs `make venv` and then each target in `targets`. Every target runs even
@@ -78,12 +78,12 @@ Targets the Makefile does not define are skipped.
 | `requirements` | `requirements-dev.txt` | Used for the pip cache key |
 | `targets` | `lint validate readme-check` | |
 
-## esphome.yml
+## shared-esphome.yml
 
 ```yaml
 jobs:
   ci:
-    uses: josa42/gha-workflows/.github/workflows/esphome.yml@main
+    uses: josa42/gha-workflows/.github/workflows/shared-esphome.yml@main
 ```
 
 Runs [`josa42/actions/esphome-lint`](https://github.com/josa42/actions/tree/main/esphome-lint):
@@ -99,7 +99,7 @@ values, so no `secrets.yaml` needs to be committed.
 | `secrets_file` | | Secrets file used instead of dummy secrets |
 | `secrets` | | YAML mapping merged on top of the dummy secrets |
 
-## ha-release.yml
+## shared-ha-release.yml
 
 ```yaml
 on:
@@ -118,7 +118,7 @@ jobs:
 
   release:
     needs: ci
-    uses: josa42/gha-workflows/.github/workflows/ha-release.yml@main
+    uses: josa42/gha-workflows/.github/workflows/shared-ha-release.yml@main
     permissions:
       contents: write
     with:
