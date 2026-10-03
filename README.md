@@ -10,6 +10,7 @@ Call one with `uses: josa42/gha-workflows/.github/workflows/<file>@main`.
 | [`ha-plugin.yml`](.github/workflows/ha-plugin.yml) | Home Assistant frontend cards: syntax check and HACS |
 | [`ha-blueprints.yml`](.github/workflows/ha-blueprints.yml) | Home Assistant blueprint repositories driven by a Makefile |
 | [`ha-release.yml`](.github/workflows/ha-release.yml) | Tagged releases for integrations and cards |
+| [`esphome.yml`](.github/workflows/esphome.yml) | ESPHome device configs: yamllint and `esphome config` |
 | [`nvim-plugin.yml`](.github/workflows/nvim-plugin.yml) | Neovim plugins: stylua and plenary busted |
 
 Each workflow detects what the calling repository actually contains and skips
@@ -76,6 +77,27 @@ Targets the Makefile does not define are skipped.
 | `python_version` | `"3.12"` | |
 | `requirements` | `requirements-dev.txt` | Used for the pip cache key |
 | `targets` | `lint validate readme-check` | |
+
+## esphome.yml
+
+```yaml
+jobs:
+  ci:
+    uses: josa42/gha-workflows/.github/workflows/esphome.yml@main
+```
+
+Runs [`josa42/actions/esphome-lint`](https://github.com/josa42/actions/tree/main/esphome-lint):
+yamllint over the config directory, then `esphome config` for every file in
+`files` with a top-level `esphome:` key. Missing secrets are filled with dummy
+values, so no `secrets.yaml` needs to be committed.
+
+| Input | Default | |
+| --- | --- | --- |
+| `working_directory` | `.` | Root of the ESPHome config |
+| `files` | `*.yaml` | Newline separated globs of device files |
+| `esphome_version` | `latest` | |
+| `secrets_file` | | Secrets file used instead of dummy secrets |
+| `secrets` | | YAML mapping merged on top of the dummy secrets |
 
 ## ha-release.yml
 
