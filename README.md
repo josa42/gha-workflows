@@ -9,7 +9,7 @@ Call one with `uses: josa42/gha-workflows/.github/workflows/<file>@main`.
 | [`ha-integration.yml`](.github/workflows/ha-integration.yml) | Home Assistant custom integrations: ruff, pytest, HACS and hassfest |
 | [`ha-plugin.yml`](.github/workflows/ha-plugin.yml) | Home Assistant frontend cards: syntax check and HACS |
 | [`ha-blueprints.yml`](.github/workflows/ha-blueprints.yml) | Home Assistant blueprint repositories driven by a Makefile |
-| [`ha-release.yml`](.github/workflows/ha-release.yml) | Tagged releases for integrations and cards |
+| [`ha-release.yml`](.github/workflows/ha-release.yml) | Releases for integrations and cards, started by hand |
 | [`esphome.yml`](.github/workflows/esphome.yml) | ESPHome device configs: yamllint and `esphome config` |
 | [`nvim-plugin.yml`](.github/workflows/nvim-plugin.yml) | Neovim plugins: stylua and plenary busted |
 
@@ -103,28 +103,57 @@ values, so no `secrets.yaml` needs to be committed.
 
 ```yaml
 on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 1.2.3, or major, minor or patch
+        required: true
+        default: patch
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   release:
+    needs: ci
     uses: josa42/gha-workflows/.github/workflows/ha-release.yml@main
+    permissions:
+      contents: write
+    with:
+      version: ${{ inputs.version }}
 ```
 
-For an integration it checks that the tag matches the version in
-`manifest.json`, zips `custom_components/<domain>` and attaches the archive.
-For anything else it attaches the file named by `hacs.json`. Release notes are
-generated from the commits since the previous tag.
+Start a release with `gh workflow run release -f version=minor`. The caller's
+`ci.yml` needs a `workflow_call:` trigger, so the release runs the same checks
+as every push.
 
-The caller needs `permissions: contents: write`.
+The `prepare` job uses [release-prepare] to bump the version, date the
+`## Unreleased` section of `CHANGELOG.md` if there is one, then commit, tag and
+push. For an integration, `custom_components/<domain>/manifest.json` is always
+bumped. Other files holding the version go in `version_files`:
+
+```yaml
+    with:
+      version: ${{ inputs.version }}
+      version_files: |
+        custom_components/x/__init__.py: STRATEGY_VERSION = "{version}"
+```
+
+The `publish` job checks out the tag and uses [release-publish]. For an
+integration it zips `custom_components/<domain>`, for anything else it attaches
+the file named by `hacs.json`. The release notes are the changelog section, or
+generated from the commits without a changelog. If publishing fails, re-run the
+failed job.
 
 | Input | Default | |
 | --- | --- | --- |
+| `version` | | `1.2.3`, or `major`, `minor` or `patch` |
+| `version_files` | | Extra `path: template` lines, see [release-prepare] |
 | `files` | detected | Release assets |
-| `check_version` | `"true"` | Fail when the tag does not match the manifest |
 | `draft` | `false` | |
 | `prerelease` | `false` | |
+
+[release-prepare]: https://github.com/josa42/actions/tree/main/release-prepare
+[release-publish]: https://github.com/josa42/actions/tree/main/release-publish
